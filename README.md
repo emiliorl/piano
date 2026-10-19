@@ -2,7 +2,7 @@
 
 A zero-install piano practice app that runs in the browser. Notes fall toward a hit line, and in **Wait mode** the song stops until you play the right key. Play on a real piano (through the microphone or a MIDI keyboard) or on your computer keyboard.
 
-It is a single file, [index.html](index.html), with no build step and no dependencies. Everything runs on your machine using the Web Audio API and an HTML5 canvas.
+It is plain HTML, CSS and JavaScript modules with no build step and no dependencies. Everything runs on your machine using the Web Audio API and an HTML5 canvas.
 
 > **About "AI":** earlier drafts of this project were called "Piano AI Practice". There is no machine learning in Keyfall. Pitch detection is classic signal processing (autocorrelation), and everything else is ordinary application code. A real ML model is listed under [Future improvements](#future-improvements).
 
@@ -10,7 +10,7 @@ It is a single file, [index.html](index.html), with no build step and no depende
 
 ## Contents
 1. [Features](#features)
-2. [Running it](#running-it)
+2. [Running it, tests and project structure](#running-it)
 3. [Practice modes](#practice-modes)
 4. [Songs and importing](#songs-and-importing)
 5. [Ways to play](#ways-to-play)
@@ -40,16 +40,54 @@ It is a single file, [index.html](index.html), with no build step and no depende
 
 ## Running it
 
-1. Open `index.html` in Chrome, Edge, Brave or Firefox. MIDI keyboard support needs a Chromium browser.
-2. The microphone only works on `https://` or `localhost`. If it is blocked when opening the file directly, serve the folder:
+The app uses JavaScript modules, which browsers only load over `http://`, so it needs a tiny local server (opening `index.html` directly shows a message saying so). You need Python 3.
 
-   ```bash
-   python -m http.server 8000
-   ```
+```bash
+python serve.py          # http://localhost:8000  (or: npm start)
+```
 
-   then open <http://localhost:8000>.
+Open <http://localhost:8000> in Chrome, Edge, Brave or Firefox. MIDI keyboard support needs a Chromium browser. `serve.py` tells the browser not to cache, so a normal refresh always shows the latest code. (`python -m http.server 8000` also works, but browsers may keep showing an old copy.)
 
 The grand piano sound downloads about 2 MB of recordings the first time it is used. Without a connection it falls back to the built-in synth piano.
+
+### Tests
+
+```bash
+npm test                 # node --test, Node 18 or newer, nothing to install
+```
+
+The tests cover the MIDI and typed-note parsers, the song library, pitch detection on generated tones, and the practice engine (Wait and tempo modes, holding, switching hands, jumping, and Listen) using a fake clock.
+
+## Project structure
+
+```
+index.html            page markup only
+css/styles.css        all styling
+serve.py              no-cache dev server
+js/
+  main.js             entry point: creates the pieces and wires them to the page
+  engine.js           practice logic: position, scoring, holding, seeking, Listen (no DOM, no audio)
+  audio.js            Web Audio engine: instruments, samples, reverb
+  pitch.js            monophonic pitch detection (pure function)
+  mic.js              microphone capture and note events
+  keyboard.js         on-screen piano and key-column geometry
+  roll.js             falling-note canvas
+  inputs.js           mouse/touch, computer keyboard and MIDI keyboard
+  settings.js         remembered settings (localStorage)
+  util.js, dom.js     small helpers
+  songs/
+    text.js           typed-note format
+    midi.js           standard MIDI file parser
+    builtin.js        the built-in songs
+    library.js        built-in + imported songs, stored in the browser
+  ui/
+    segments.js       Both/Right/Left and Wait/Tempo button groups
+    seekbar.js        jump slider and wheel scrolling
+    importer.js       Import dialog and drag-and-drop
+tests/                node:test files and helpers
+```
+
+The engine never touches the page. It asks for things (show a message, flash a key, start a sound) through a small `hooks` object that `main.js` provides, and takes its clock as a parameter. That is what makes it testable and keeps the page code thin.
 
 ## Practice modes
 
@@ -73,6 +111,8 @@ The **Both / Right / Left** buttons filter what you practise. Changing them keep
 
 ### Listen
 Plays the song from your current position (or the top if you have finished) using the selected sound. Pausing keeps its position. Playing a key while paused hands control back to you at the place you left.
+
+Switching hands while Listen is playing is seamless: the music does not stop, the hand you turned off goes quiet, and notes of the other hand that are already sounding keep ringing. Turning a hand back on brings in its notes, including ones that should already be sounding.
 
 ### Jumping
 Drag the slider along the bottom, scroll the mouse wheel over the roll, or use ↑/↓ (one note or chord) and PageUp/PageDown (eight). Notes before the new start point are greyed out and not scored, and the score restarts from there.
@@ -122,7 +162,7 @@ The microphone is analysed in the browser; no audio leaves your computer.
 
 1. **Raw audio.** The stream is requested with echo cancellation, noise suppression and auto gain turned off, because those speech filters distort instruments.
 2. **Volume gate.** A 4096-sample window is skipped if its RMS level is below the noise threshold (default 0.01, adjustable).
-3. **Pitch.** A normalized square difference function (NSDF) is computed over lags covering about 60 Hz to 2100 Hz. The first strong peak (at least 85% of the highest, and a clarity of 0.5 or more) is taken as the fundamental, then refined by parabolic interpolation and converted to a MIDI note.
+3. **Pitch.** A normalized square difference function (NSDF) is computed over lags covering about 60 Hz to 2100 Hz; in practice notes from about A♯1 to G♯6 are detected reliably (the tests check this), and notes above that tend to be reported an octave low. The first strong peak (at least 85% of the highest, and a clarity of 0.5 or more) is taken as the fundamental, then refined by parabolic interpolation and converted to a MIDI note.
 4. **Stability.** A note must be read twice in a row, and a repeated note needs a fresh attack (a jump in volume), so one sustained note does not trigger the next. Wait mode also ignores the mic for 300 ms after a hit.
 5. **Feedback.** The detected note is shown top-right and marked in amber on the keyboard.
 
@@ -167,7 +207,7 @@ Everything is stored in your browser's `localStorage`, so it does not travel bet
  Sound:  voice per held key -> bus -> compressor (+ reverb) -> speakers
 ```
 
-A song is a list of notes with a start time and length in beats. Notes that start together form a **step** (a single note or a chord); Wait mode moves from step to step. The whole app is one HTML file with its CSS and JavaScript inline.
+A song is a list of notes with a start time and length in beats. Notes that start together form a **step** (a single note or a chord); Wait mode moves from step to step. See [Project structure](#project-structure) for where each part lives.
 
 ## Known limitations
 
@@ -219,7 +259,8 @@ A song is a list of notes with a start time and length in beats. Notes that star
 - **MIDI output**, so the app can drive a hardware piano or synth.
 - **Syncing settings and songs** between devices.
 - **Accessibility:** keyboard navigation of the controls, high-contrast and colour-blind-safe themes.
-- **Code structure:** split the single file into modules and add automated tests for the parser, scoring and pitch detection.
+- **Wider mic range:** reliable detection above G♯6 and below A♯1, which needs a longer analysis window for the lowest notes.
+- **Browser-level tests:** automated end-to-end tests of the page itself (the engine and parsers are already covered).
 
 ## Credits
 
