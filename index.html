@@ -3,72 +3,165 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Piano AI Practice</title>
+<title>Keyfall</title>
 <style>
-:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--dim:#8b949e;--cyan:#22d3ee;--green:#34d399;--red:#f87171}
+:root{--bg:#0b0f14;--panel:#12171e;--panel2:#171d26;--line:#232b36;--fg:#e6edf3;--dim:#7d8896;--cyan:#22d3ee;--violet:#a78bfa;--green:#34d399;--red:#f87171}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
-header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
-h1{font-size:16px;margin:0 8px 0 0}
-select,button,input[type=text]{background:#21262d;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:inherit}
-button{cursor:pointer}button:hover{border-color:var(--cyan)}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 system-ui,sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;display:flex;gap:6px;align-items:center;margin-right:4px;white-space:nowrap}
+.sp{flex:1}
+.vsep{width:1px;height:20px;background:var(--line)}
+select,button,input[type=text],textarea{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit}
+button{cursor:pointer}
+button:hover,select:hover{border-color:#3a4656}
 button.on{background:#0e7490;border-color:var(--cyan)}
-.stats{margin-left:auto;display:flex;gap:16px;color:var(--dim)}
-.stats b{color:var(--fg)}
-#settings{display:none;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line);gap:16px;align-items:center;flex-wrap:wrap}
-#settings.open{display:flex}
-main{flex:1;position:relative;min-height:0}
+button.primary{background:var(--cyan);color:#06222a;border-color:var(--cyan);font-weight:600}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
+.seg button{border:0;background:transparent;padding:4px 10px;border-radius:6px;color:var(--dim)}
+.seg button.on{background:#243244;color:var(--fg)}
+main{flex:1;position:relative;min-height:0;overflow:hidden}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-#status{position:absolute;top:8px;left:12px;color:var(--dim);font-size:12px}
-#kb{position:relative;height:150px;background:#000;flex:none;user-select:none;touch-action:none}
+#hud{position:absolute;top:10px;left:14px;max-width:46%;pointer-events:none}
+#stats{display:flex;gap:14px;color:var(--dim)}
+#stats b{color:var(--fg);font-weight:600}
+#legend{margin-top:2px;font-size:12px;color:var(--dim)}
+#status{margin-top:4px;color:var(--dim);font-size:12px}
+#heard{position:absolute;top:10px;right:14px;text-align:right;font-size:12px;color:var(--dim);display:none}
+#heard b{display:block;font-size:24px;color:var(--fg);line-height:1.1}
+#hbar{height:4px;background:var(--cyan);width:0;margin-top:4px;border-radius:2px;margin-left:auto}
+#seekbar{position:absolute;left:14px;right:14px;bottom:5px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--dim)}
+#seekl{min-width:84px}
+#seek{flex:1;accent-color:var(--cyan)}
+#bpm{width:90px;accent-color:var(--cyan)}
+#settings{position:absolute;top:0;right:0;bottom:0;width:min(340px,100%);background:var(--panel);border-left:1px solid var(--line);z-index:10;transform:translateX(100%);visibility:hidden;transition:transform .2s,visibility .2s;overflow:auto;padding:14px 16px 20px}
+#settings.open{transform:none;visibility:visible;box-shadow:-12px 0 30px #0008}
+#settings h3{margin:0;display:flex;justify-content:space-between;align-items:center;font-size:15px}
+#settings h4{margin:18px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.set{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0}
+.set input[type=range]{width:140px;accent-color:var(--cyan)}
+.set select{max-width:170px}
+.hint{color:var(--dim);font-size:12px;margin:4px 0 0}
+#kb{position:relative;height:150px;background:#000;flex:none;user-select:none;touch-action:none;border-top:1px solid var(--line)}
 .w,.b{position:absolute;top:0;cursor:pointer}
 .w{background:#f0f0f0;border:1px solid #222;height:100%;border-radius:0 0 4px 4px}
 .b{background:#111;height:60%;z-index:2;border-radius:0 0 3px 3px}
 .w.target{background:var(--cyan)}.b.target{background:#0891b2}
+.w.targetL{background:var(--violet)}.b.targetL{background:#7c5cdb}
 .w.key-detected-correct,.b.key-detected-correct{background:var(--green)}
 .w.key-detected-wrong,.b.key-detected-wrong{background:var(--red)}
+.w.down{background:#bbb}.b.down{background:#444}
+.w.heard,.b.heard{box-shadow:inset 0 -10px 0 #f59e0b}
 .qk{position:absolute;left:0;right:0;bottom:18px;text-align:center;font:700 12px system-ui;color:#0e7490;pointer-events:none}
 .b .qk{bottom:8px;color:#67e8f9}
-#heard{position:absolute;top:8px;right:12px;text-align:right;font-size:12px;color:var(--dim);display:none}
-#heard b{display:block;font-size:26px;color:var(--fg);line-height:1.1}
-#hbar{height:4px;background:var(--cyan);width:0;margin-top:4px;border-radius:2px;margin-left:auto}
-.w.heard,.b.heard{box-shadow:inset 0 -10px 0 #f59e0b}
 .lbl{position:absolute;bottom:3px;width:100%;text-align:center;font-size:9px;color:#555;pointer-events:none}
+dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:18px;width:min(460px,92vw)}
+dialog::backdrop{background:#000a}
+dialog h3{margin:0 0 8px}dialog p{margin:12px 0 4px;color:var(--dim)}
+dialog textarea,dialog input[type=text]{width:100%}
+.row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+@media(max-width:700px){#hud{max-width:60%}.brand span{display:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1>🎹 Piano AI Practice</h1>
+  <div class="brand">🎹<span>Keyfall</span></div>
   <select id="song"></select>
-  <select id="range">
-    <option value="48,72">C3–C5</option>
-    <option value="36,84" selected>C2–C6</option>
-    <option value="21,108">A0–C8</option>
+  <select id="hands">
+    <option value="both">Both hands</option>
+    <option value="right">Right hand</option>
+    <option value="left">Left hand</option>
   </select>
   <select id="mode">
     <option value="wait">Wait for notes</option>
     <option value="tempo">Play at tempo</option>
   </select>
-  <button id="start" style="display:none">▶ Start</button>
-  <button id="mic">Enable Mic</button>
-  <button id="keys" class="on">⌨ Keys</button>
-  <button id="restart">Restart</button>
-  <button id="import">Import</button>
-  <button id="gear">⚙</button>
-  <div class="stats">
-    <span>Note <b id="pos">0/0</b></span><span>Streak <b id="streak">0</b></span><span>Accuracy <b id="acc">–</b></span>
-  </div>
+  <span class="sp"></span>
+  <button id="start" class="primary" style="display:none">▶ Start</button>
+  <button id="listen" title="Hear the computer play it">🔊 Listen</button>
+  <button id="restart" title="Restart from the beginning">↺ Restart</button>
+  <span class="vsep"></span>
+  <button id="mic" title="Listen to your piano through the microphone">🎤 Mic</button>
+  <button id="import">＋ Import</button>
+  <button id="gear" title="Settings">⚙</button>
 </header>
-<div id="settings">
-  <label>Mic noise threshold (RMS) <input id="thr" type="range" min="0.002" max="0.1" step="0.001" value="0.01"> <b id="thrv">0.01</b></label>
-  <label>Tempo <input id="bpm" type="range" min="30" max="180" step="5" value="70"> <b id="bpmv">70</b> BPM</label>
-  <label><input id="sound" type="checkbox" checked> Play sound on keys</label>
-  <label><input id="hl" type="checkbox" checked> Highlight next key</label>
-  <label><input id="wrongfx" type="checkbox"> Flash wrong notes red</label>
-  <span style="color:var(--dim)">QWERTY: A S D F G H J K L ; ' = white, W E T Y U O P = black, Z/X = octave down/up (base C<span id="oct">4</span>)</span>
-</div>
-<main><canvas id="roll"></canvas><div id="heard">Mic hears<b id="hnote">–</b><div id="hbar"></div></div><div id="status">Click a key, use QWERTY, MIDI or the mic.</div></main>
+<main>
+  <canvas id="roll"></canvas>
+  <div id="hud">
+    <div id="stats"><span>Notes <b id="pos">0/0</b></span><span>Streak <b id="streak">0</b></span><span>Accuracy <b id="acc">–</b></span></div>
+    <div id="legend"><span style="color:#22d3ee">■</span> Right hand &nbsp; <span style="color:#a78bfa">■</span> Left hand</div>
+    <div id="status"></div>
+  </div>
+  <div id="heard">Mic hears<b id="hnote">–</b><div id="hbar"></div></div>
+  <div id="seekbar">
+    <span id="seekl">0:00 / 0:00</span>
+    <input type="range" id="seek" min="0" max="1" step="0.01" title="Drag to jump to any point. Mouse wheel or ↑/↓ also scroll.">
+    <label title="Tempo">♩ <input id="bpm" type="range" min="30" max="240" step="5" value="70"> <b id="bpmv">70</b></label>
+  </div>
+  <aside id="settings">
+    <h3>Settings <button id="close" title="Close">✕</button></h3>
+
+    <h4>Practice</h4>
+    <label class="set"><span>Left/right hand split</span><select id="split">
+      <option value="auto">Auto (by track)</option>
+      <option value="48">Below C3 = left</option>
+      <option value="55">Below G3 = left</option>
+      <option value="60">Below C4 = left</option>
+      <option value="64">Below E4 = left</option>
+      <option value="72">Below C5 = left</option>
+    </select></label>
+    <label class="set"><span>Hold notes for their length</span><input id="hold" type="checkbox" checked></label>
+    <label class="set"><span>Highlight next keys</span><input id="hl" type="checkbox" checked></label>
+    <label class="set"><span>Flash wrong notes red</span><input id="wrongfx" type="checkbox"></label>
+    <label class="set"><span>Remember hands, tempo and mode per song</span><input id="persong" type="checkbox" checked></label>
+
+    <h4>Sound</h4>
+    <label class="set"><span>Play sound on keys</span><input id="sound" type="checkbox" checked></label>
+    <label class="set"><span>Instrument</span><select id="inst">
+      <option value="grand">Grand piano (recorded)</option>
+      <option value="synth">Synth piano (offline)</option>
+      <option value="epiano">Electric piano</option>
+      <option value="organ">Organ</option>
+      <option value="strings">Soft strings</option>
+      <option value="box">Music box</option>
+    </select></label>
+    <label class="set"><span>Volume</span><input id="vol" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+    <label class="set"><span>Room reverb</span><input id="reverb" type="checkbox" checked></label>
+
+    <h4>Microphone</h4>
+    <label class="set"><span>Noise threshold <b id="thrv">0.01</b></span><input id="thr" type="range" min="0.002" max="0.1" step="0.001" value="0.01"></label>
+    <p class="hint">Lower = more sensitive. Raise it if room noise triggers notes.</p>
+
+    <h4>Keyboard</h4>
+    <label class="set"><span>Visible range</span><select id="range">
+      <option value="48,72">C3–C5</option>
+      <option value="36,84" selected>C2–C6</option>
+      <option value="21,108">A0–C8</option>
+    </select></label>
+    <div class="set"><span>Computer-key labels</span><button id="keys" class="on">Show</button></div>
+    <label class="set"><span>Move labels to the next notes</span><input id="autooct" type="checkbox" checked></label>
+    <p class="hint">Bottom row Z–M is one octave from C (S D G H J are sharps); top row Q–P is the next octave (2 3 5 6 7 9 0 are sharps). ←/→ or [ ] shift the octave (now from C<span id="oct">4</span>).</p>
+
+    <h4>Data</h4>
+    <div class="set"><span>Saved settings</span><button id="reset">Reset</button></div>
+  </aside>
+</main>
 <div id="kb"></div>
+
+<dialog id="dlg">
+  <h3>Import a song</h3>
+  <p>MIDI file (.mid) — keeps both hands, chords and timing. You can also drag a file onto the page.</p>
+  <input type="file" id="file" accept=".mid,.midi">
+  <p>Or type notes: space-separated, chords joined with <b>+</b>, rests as <b>_</b>, note length in beats after a colon, e.g. <b>C4:2</b> or <b>E4:0.5+C3:2</b></p>
+  <textarea id="txt" rows="3" placeholder="C4 E4+C3 G4 _ C5+G3"></textarea>
+  <p>Name</p>
+  <input type="text" id="sname" placeholder="My song">
+  <div class="row">
+    <button id="load">Add song</button>
+    <button id="del">Delete current custom song</button>
+    <button id="cancel">Close</button>
+  </div>
+</dialog>
 
 <script>
 const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -78,29 +171,340 @@ function parseNote(s){const r=/^([A-Ga-g])([#b]?)(-?\d)$/.exec(s);if(!r)return n
   let p={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[r[1].toUpperCase()];if(r[2]==='#')p++;if(r[2]==='b')p--;
   return (+r[3]+1)*12+p;}
 const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-const SONGS={
- 'Ode to Joy':'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4 D4 D4 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4 C4 C4',
- 'Twinkle Twinkle Little Star':'C4 C4 G4 G4 A4 A4 G4 F4 F4 E4 E4 D4 D4 C4 G4 G4 F4 F4 E4 E4 D4 G4 G4 F4 F4 E4 E4 D4 C4 C4 G4 G4 A4 A4 G4 F4 F4 E4 E4 D4 D4 C4',
- 'Für Elise':'E5 D#5 E5 D#5 E5 B4 D5 C5 A4 C4 E4 A4 B4 E4 G#4 B4 C5 E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4',
- 'Canon in D':'F#5 E5 D5 C#5 B4 A4 B4 C#5 D5 C#5 B4 A4 G4 F#4 G4 E4 F#5 E5 D5 C#5 B4 A4 B4 C#5',
+// ---------- song sources ----------
+// A source is {name,bpm,notes:[{t,d,m,h}]} with t/d in beats and h 'R'|'L'.
+function mkSong(name,bpm,notes){
+  if(!notes.length)throw new Error('No notes found');
+  const s=Math.min(...notes.map(n=>n.t));
+  notes.forEach(n=>n.t-=s);
+  return {name,bpm,notes};
+}
+function textSong(name,text,bpm=70){
+  // each token is a note or chord (joined with +); ":n" sets a note's length in beats (default 1).
+  // The song moves on by the length of the token's first note.
+  const notes=[];let t=0;
+  for(const tok of text.trim().split(/\s+/)){
+    let adv=1;
+    tok.split('+').forEach((part,k)=>{
+      const [nm,len]=part.split(':'),dur=len?+len:1;
+      if(k===0)adv=dur;
+      const m=parseNote(nm);
+      if(m!=null)notes.push({t,d:Math.max(0.2,dur-0.1),m,h:m>=60?'R':'L'});
+    });
+    t+=adv;
+  }
+  return mkSong(name,bpm,notes);
+}
+const BUILTIN={
+ 'Ode to Joy':'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:0.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:0.5 C4:2',
+ 'Ode to Joy (both hands)':'E4+C3:2 E4 F4+G3:2 G4 G4+C3:2 F4 E4+G3:2 D4 C4+C3:2 C4 D4+G3:2 E4 E4:1.5+C3:2 D4:0.5 D4:2+G3:2',
+ 'Twinkle Twinkle Little Star':'C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2 G4 G4 F4 F4 E4 E4 D4:2 G4 G4 F4 F4 E4 E4 D4:2 C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2',
+ 'Für Elise':'E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:1.5 _:0.5 C4:0.5 E4:0.5 A4:0.5 B4:1.5 _:0.5 E4:0.5 G#4:0.5 B4:0.5 C5:1.5 _:0.5 E4:0.5 E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:1.5',
+ 'Canon in D':'F#5:2 E5:2 D5:2 C#5:2 B4:2 A4:2 B4:2 C#5:2 D5 C#5 B4 A4 G4 F#4 G4 E4 F#5 E5 D5 C#5 B4 A4 B4 C#5',
 };
-let song=[],idx=0,total=0,correct=0,streak=0,range=[36,84];
+const BPMS={'Für Elise':100};
+
+// ---------- standard MIDI file parser ----------
+function parseMidi(buf,name){
+  const d=new DataView(buf);let p=0;
+  const str=n=>{let s='';for(let i=0;i<n;i++)s+=String.fromCharCode(d.getUint8(p++));return s};
+  const vlq=()=>{let v=0,b;do{b=d.getUint8(p++);v=(v<<7)|(b&127)}while(b&128);return v};
+  if(str(4)!=='MThd')throw new Error('Not a MIDI file');
+  const hl=d.getUint32(p);const ntr=d.getUint16(p+6),div=d.getUint16(p+8);p+=4+hl;
+  if(div&0x8000)throw new Error('SMPTE timing is not supported');
+  let bpm=null;const tracks=[];
+  for(let t=0;t<ntr&&p<d.byteLength;t++){
+    if(str(4)!=='MTrk')break;
+    const end=p+4+d.getUint32(p);p+=4;
+    let tick=0,run=0;const on={},ns=[];
+    while(p<end){
+      tick+=vlq();
+      let s=d.getUint8(p);
+      if(s===0xFF){
+        p++;const type=d.getUint8(p++),l=vlq();
+        if(type===0x51&&bpm==null)bpm=60000000/((d.getUint8(p)<<16)|(d.getUint8(p+1)<<8)|d.getUint8(p+2));
+        p+=l;continue;
+      }
+      if(s===0xF0||s===0xF7){p++;p+=vlq();continue}
+      if(s&0x80){run=s;p++}else s=run;
+      const hi=s&0xF0,ch=s&15;
+      if(hi===0xC0||hi===0xD0){p++;continue}
+      const a=d.getUint8(p++),c=d.getUint8(p++),key=ch*128+a;
+      if(hi===0x90&&c>0)on[key]=tick;
+      else if((hi===0x80||hi===0x90)&&on[key]!=null){
+        if(ch!==9)ns.push({t:on[key]/div,d:Math.max(0.1,(tick-on[key])/div),m:a});
+        delete on[key];
+      }
+    }
+    p=end;
+    if(ns.length)tracks.push(ns);
+  }
+  const all=tracks.flat();
+  // exactly two clearly separate tracks = right hand (higher) and left hand; anything else splits by pitch
+  const avg=tracks.map(t=>t.reduce((s,n)=>s+n.m,0)/t.length);
+  if(tracks.length===2&&Math.abs(avg[0]-avg[1])>=6){
+    const r=avg[0]>avg[1]?0:1;
+    tracks.forEach((t,i)=>t.forEach(n=>n.h=i===r?'R':'L'));
+  }else all.forEach(n=>n.h=n.m>=60?'R':'L');
+  return mkSong(name,bpm?Math.round(bpm):70,all);
+}
+
+// ---------- custom songs (stored in this browser) ----------
+let customs=[];
+try{customs=JSON.parse(localStorage.getItem('piano.custom')||'[]')}catch(e){}
+const saveCustoms=()=>{try{localStorage.setItem('piano.custom',JSON.stringify(customs))}catch(e){$('status').textContent='Song loaded, but it was too large to save in this browser.'}};
+function b64(buf){let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)}
+function unb64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u.buffer}
+function getSrc(v){
+  if(v.startsWith('b:'))return textSong(v.slice(2),BUILTIN[v.slice(2)],BPMS[v.slice(2)]||70);
+  const c=customs[+v.slice(2)];
+  return c.kind==='midi'?parseMidi(unb64(c.data),c.name):textSong(c.name,c.data);
+}
+function refreshSongs(sel){
+  const s=$('song');s.innerHTML='';
+  for(const n in BUILTIN)s.add(new Option(n,'b:'+n));
+  customs.forEach((c,i)=>s.add(new Option('★ '+c.name,'c:'+i)));
+  s.value=sel||'b:Ode to Joy';
+  if(!s.value)s.selectedIndex=0;
+}
+
+// ---------- state ----------
+let src,notes=[],steps=[],results=[],hits=0,idx=0,total=0,correct=0,streak=0,range=[36,84];
+let mode='wait',running=false,done=false,t0=0,pos=0,scanFrom=0,lastTarget=null,lastMatch=0,showKeys=true,base=4;
+const PX=90,WIN=0.4; // pixels per beat, hit window (beats) in tempo mode
+const beatMs=()=>60000/+$('bpm').value;
+
+function build(){
+  const h=$('hands').value;
+  const sp=$('split').value;
+  notes=src.notes.map(n=>({...n,h:sp==='auto'?n.h:(n.m>=+sp?'R':'L')}))
+    .filter(n=>h==='both'||(h==='right')===(n.h==='R')).sort((a,b)=>a.t-b.t||a.m-b.m);
+  steps=[];
+  notes.forEach((n,i)=>{
+    const l=steps[steps.length-1];
+    if(l&&n.t-l.t<0.06)l.ns.push(i);else steps.push({t:n.t,ns:[i]});
+    n.step=steps.length-1;
+  });
+  endT=notes.reduce((e,n)=>Math.max(e,n.t+n.d),0);
+  // only explain the two hand colours when both hands are on screen
+  $('legend').style.display=notes.some(n=>n.h==='R')&&notes.some(n=>n.h==='L')?'':'none';
+}
+let endT=0;
+function loadSong(s){
+  killDemo();
+  src=s;build();
+  idx=0;waitT=steps[0]?steps[0].t:0;countIn=false;progress.clear();total=correct=streak=hits=0;results=[];running=false;done=false;scanFrom=0;presses.clear();
+  pos=mode==='tempo'?-2:(steps[0]?steps[0].t-1:0);
+  $('start').textContent='▶ Start';
+  $('status').textContent=mode==='wait'?'Play the highlighted notes.':'Press Start, then play each note as it reaches the line.';
+  lastTarget=null;markTarget();updateStats();saveSettings();
+}
+function pickSong(){
+  const s=getSrc($('song').value),per=$('persong').checked;
+  // with per-song memory on, a song reopens exactly as you left it; a new song starts with both hands
+  const v=(per&&store.songs[songKey()])||
+    {hands:per?'both':$('hands').value,split:per?'auto':$('split').value,bpm:s.bpm,mode:$('mode').value};
+  $('hands').value=v.hands;$('split').value=v.split;
+  $('bpm').value=clamp(v.bpm,30,240);$('bpmv').textContent=$('bpm').value;
+  mode=$('mode').value=v.mode;$('start').style.display=mode==='tempo'?'':'none';
+  loadSong(s);
+  if(!notes.length){$('hands').value='both';loadSong(s)}
+}
+
+// Switching hands (or the hand split) keeps your place; only the Restart button starts over.
+function changeHands(){
+  if(!src)return;
+  killDemo();
+  // `progress` remembers every note you've scored, so switching hands back and forth loses nothing
+  const key=n=>n.t+':'+n.m,prev=progress;
+  notes.forEach((n,i)=>{if(results[i]==='hit'||results[i]==='miss')prev.set(key(n),results[i])});
+  const curT=mode==='wait'?waitT:pos;
+  build();
+  if(!notes.length){
+    alert('That song has no notes for the selected hand.');
+    $('hands').value='both';build();
+  }
+  results=[];hits=0;presses.clear();
+  const passed=n=>mode==='wait'?n.t<curT-0.001:n.t+WIN<pos; // notes behind you: leave them out of the score
+  notes.forEach((n,i)=>{
+    const r=prev.get(key(n));
+    if(r){results[i]=r;if(r==='hit')hits++}else if(passed(n))results[i]='skip';
+  });
+  idx=steps.findIndex(s=>s.t>=curT-0.001);if(idx<0)idx=steps.length;
+  scanFrom=notes.findIndex(n=>n.t+WIN>=pos);if(scanFrom<0)scanFrom=notes.length;
+  lastTarget=null;markTarget();updateStats();saveSettings();
+}
+
+// ---------- remembered settings ----------
+const GLOBAL_IDS=['range','thr','sound','inst','vol','reverb','hold','hl','wrongfx','autooct','mode','hands','split','persong'];
+let store={g:{},songs:{},song:null};
+try{store=Object.assign(store,JSON.parse(localStorage.getItem('piano.settings')||'{}'))}catch(e){}
+const val=id=>{const e=$(id);return e.type==='checkbox'?e.checked:e.value};
+function songKey(){
+  const v=$('song').value;
+  return v.startsWith('c:')?'c:'+customs[+v.slice(2)]?.name:v;
+}
+function songValue(key){ // find the dropdown value for a saved song key
+  if(!key)return null;
+  if(key.startsWith('c:')){const i=customs.findIndex(c=>c.name===key.slice(2));return i<0?null:'c:'+i}
+  return key in BUILTIN||key.slice(2) in BUILTIN?key:null;
+}
+let saveT;
+function saveSettings(){
+  clearTimeout(saveT);
+  saveT=setTimeout(()=>{
+    const g={};GLOBAL_IDS.forEach(id=>g[id]=val(id));g.showKeys=showKeys;
+    store.g=g;store.song=songKey();
+    if(g.persong&&store.song)store.songs[store.song]={hands:g.hands,split:g.split,bpm:+$('bpm').value,mode:g.mode};
+    try{localStorage.setItem('piano.settings',JSON.stringify(store))}catch(e){}
+  },200);
+}
+function applyStore(){
+  const g=store.g||{};
+  for(const id of GLOBAL_IDS)if(id in g){
+    const e=$(id);
+    if(e.type==='checkbox')e.checked=g[id];
+    else if([...(e.options||[])].length===0||[...e.options].some(o=>o.value===String(g[id])))e.value=g[id];
+  }
+  showKeys=g.showKeys!==false;$('keys').classList.toggle('on',showKeys);
+  range=$('range').value.split(',').map(Number);
+  $('thrv').textContent=$('thr').value;
+}
 
 // ---------- synth ----------
-let ac;
-function audio(){if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac}
-function synth(m,dur=1.2){
-  if(!$('sound').checked)return;
-  const c=audio(),f=440*2**((m-69)/12),t=c.currentTime,g=c.createGain();
-  g.gain.setValueAtTime(0.25,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);g.connect(c.destination);
-  [['triangle',f,1],['sine',f*2,0.4]].forEach(([type,fr,v])=>{
-    const o=c.createOscillator(),og=c.createGain();o.type=type;o.frequency.value=fr;og.gain.value=v;
-    o.connect(og).connect(g);o.start(t);o.stop(t+dur);});
+let ac,bus,master,wet;
+function audio(){
+  if(!ac){
+    ac=new (window.AudioContext||window.webkitAudioContext)();
+    master=ac.createGain();master.gain.value=+$('vol').value;
+    const comp=ac.createDynamicsCompressor();master.connect(comp);comp.connect(ac.destination);
+    bus=ac.createGain();bus.connect(master);
+    // small generated room reverb
+    const len=Math.floor(ac.sampleRate*1.8),ir=ac.createBuffer(2,len,ac.sampleRate);
+    for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3)}
+    const conv=ac.createConvolver();conv.buffer=ir;
+    wet=ac.createGain();wet.gain.value=$('reverb').checked?0.25:0;
+    bus.connect(conv);conv.connect(wet);wet.connect(master);
+  }
+  if(ac.state==='suspended')ac.resume();
+  return ac;
 }
+const hz=m=>440*2**((m-69)/12);
+let noiseBuf;
+function noise(c){
+  if(!noiseBuf){noiseBuf=c.createBuffer(1,Math.floor(c.sampleRate*0.2),c.sampleRate);
+    const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  return noiseBuf;
+}
+// a voice is {release(t)}; sound keeps playing until it is released (key up)
+function mkVoice(c,out,oscs,relTau){
+  oscs.forEach(o=>{try{o.stop(c.currentTime+20)}catch(e){}});
+  return {release(t){
+    out.gain.setTargetAtTime(0,t,relTau);
+    setTimeout(()=>{oscs.forEach(o=>{try{o.stop()}catch(e){}});out.disconnect()},relTau*8000+100);
+  }};
+}
+// additive piano: inharmonic partials, two detuned strings, hammer thump, two-stage decay
+function synthPiano(c,m,t){
+  const f=hz(m),out=c.createGain();out.gain.value=0.5;
+  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=Math.min(9000,f*10+1500);lp.Q.value=0.3;
+  lp.connect(out);out.connect(bus);
+  const oscs=[],B=0.00025*(1+Math.max(0,m-60)/12),ring=2.2+(108-m)/108*3.5;
+  const nP=m<48?12:m<72?9:m<96?6:4;
+  for(let n=1;n<=nP;n++){
+    const fn=f*n*Math.sqrt(1+B*n*n);if(fn>14000)break;
+    const a=0.55/Math.pow(n,1.15)*(n===2?1.2:1),tau=Math.max(0.12,ring/Math.pow(n,0.75));
+    for(const det of [-1.5,1.5]){
+      const o=c.createOscillator(),g=c.createGain();o.frequency.value=fn;o.detune.value=det*(n>1?1.5:1);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a/2*1.5,t+0.004);
+      g.gain.setTargetAtTime(a/2*0.55,t+0.004,0.12);   // quick drop after the strike
+      g.gain.setTargetAtTime(0,t+0.45,tau);             // then the long ring
+      o.connect(g).connect(lp);o.start(t);oscs.push(o);
+    }
+  }
+  const nb=c.createBufferSource();nb.buffer=noise(c);
+  const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=Math.min(5000,f*4);bp.Q.value=0.8;
+  const ng=c.createGain();ng.gain.setValueAtTime(0.25,t);ng.gain.setTargetAtTime(0,t,0.012);
+  nb.connect(bp).connect(ng).connect(out);nb.start(t);nb.stop(t+0.15);
+  return mkVoice(c,out,oscs,0.09);
+}
+function electricPiano(c,m,t){
+  const f=hz(m),out=c.createGain();out.gain.value=0.5;out.connect(bus);
+  const car=c.createOscillator(),mod=c.createOscillator(),mg=c.createGain(),g=c.createGain();
+  car.frequency.value=f;mod.frequency.value=f;
+  mg.gain.setValueAtTime(f*2.2,t);mg.gain.setTargetAtTime(f*0.25,t,0.5);
+  mod.connect(mg).connect(car.frequency);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.8,t+0.003);
+  g.gain.setTargetAtTime(0.18,t+0.003,0.25);g.gain.setTargetAtTime(0,t+1,1.8);
+  car.connect(g).connect(out);
+  const tn=c.createOscillator(),tg=c.createGain();tn.frequency.value=f*7;
+  tg.gain.setValueAtTime(0.08,t);tg.gain.setTargetAtTime(0,t,0.05);tn.connect(tg).connect(out);
+  [car,mod,tn].forEach(o=>o.start(t));
+  return mkVoice(c,out,[car,mod,tn],0.12);
+}
+function organ(c,m,t){
+  const f=hz(m),out=c.createGain();out.gain.setValueAtTime(0,t);out.gain.linearRampToValueAtTime(0.3,t+0.015);out.connect(bus);
+  const oscs=[1,2,3,4].map((h,i)=>{
+    const o=c.createOscillator(),g=c.createGain();o.frequency.value=f*h;g.gain.value=[0.5,0.35,0.2,0.12][i];
+    o.connect(g).connect(out);o.start(t);return o;});
+  return mkVoice(c,out,oscs,0.05);
+}
+function musicBox(c,m,t){
+  const f=hz(Math.min(m+12,115)),out=c.createGain();out.gain.value=0.5;out.connect(bus);
+  const oscs=[[1,1,1.2],[2.99,0.35,0.5],[5.4,0.15,0.3]].map(([r,a,tau])=>{
+    const o=c.createOscillator(),g=c.createGain();o.frequency.value=f*r;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a,t+0.002);g.gain.setTargetAtTime(0,t+0.002,tau);
+    o.connect(g).connect(out);o.start(t);return o;});
+  return mkVoice(c,out,oscs,0.1);
+}
+function strings(c,m,t){
+  const f=hz(m),out=c.createGain();out.gain.setValueAtTime(0,t);out.gain.linearRampToValueAtTime(0.25,t+0.25);
+  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=Math.min(3000,f*5);lp.connect(out);out.connect(bus);
+  const oscs=[-7,7].map(d=>{const o=c.createOscillator();o.type='sawtooth';o.frequency.value=f;o.detune.value=d;o.connect(lp);o.start(t);return o});
+  return mkVoice(c,out,oscs,0.25);
+}
+// recorded grand piano (Salamander Grand Piano, CC-BY 3.0, hosted by Tone.js), loaded on demand
+const SAMPLE_URL='https://tonejs.github.io/audio/salamander/',samples={};
+let sampleState='idle';
+function loadSamples(){
+  if(sampleState!=='idle')return;sampleState='loading';
+  const list=[[21,'A0']];
+  for(let o=1;o<=7;o++)[['C',0],['Ds',3],['Fs',6],['A',9]].forEach(([n,off])=>list.push([12*(o+1)+off,n+o]));
+  list.push([108,'C8']);
+  const c=audio();let n=0;
+  Promise.all(list.map(async([midi,name])=>{
+    const r=await fetch(SAMPLE_URL+name+'.mp3');if(!r.ok)throw new Error(r.status);
+    samples[midi]=await c.decodeAudioData(await r.arrayBuffer());
+    $('status').textContent=`Loading grand piano sound ${++n}/${list.length}…`;
+  })).then(()=>{sampleState='ready';$('status').textContent='Grand piano sound loaded.'})
+    .catch(()=>{sampleState='failed';$('status').textContent='Could not load the grand piano sound (offline?). Using the synth piano.'});
+}
+function sampleVoice(c,m,t){
+  const keys=Object.keys(samples).map(Number);
+  const sm=keys.reduce((a,b)=>Math.abs(b-m)<Math.abs(a-m)?b:a);
+  const s=c.createBufferSource(),g=c.createGain();
+  s.buffer=samples[sm];s.playbackRate.value=2**((m-sm)/12);g.gain.value=0.9;
+  s.connect(g).connect(bus);s.start(t);
+  return {release(t){g.gain.setTargetAtTime(0,t,0.12);setTimeout(()=>{try{s.stop()}catch(e){}g.disconnect()},1200)}};
+}
+const INST={
+  grand:(c,m,t)=>sampleState==='ready'?sampleVoice(c,m,t):synthPiano(c,m,t),
+  synth:synthPiano,epiano:electricPiano,organ,box:musicBox,strings
+};
+const voices=new Map();
+function noteOn(m,key,force){
+  noteOff(key);if(!force&&!$('sound').checked)return;
+  const c=audio();if($('inst').value==='grand')loadSamples();
+  voices.set(key,INST[$('inst').value](c,m,c.currentTime));
+}
+function noteOff(key){const v=voices.get(key);if(v){v.release(ac.currentTime);voices.delete(key)}}
 
 // ---------- keyboard ----------
 const kb=$('kb'),keyEls={};
+// transpose octaves so notes fall inside the visible keyboard range
+function fit(m){while(m<range[0])m+=12;while(m>range[1])m-=12;return m}
 function buildKeyboard(){
   kb.innerHTML='';for(const k in keyEls)delete keyEls[k];
   const [lo,hi]=range;let whites=0;
@@ -115,7 +519,6 @@ function buildKeyboard(){
   }
   markTarget();updateLabels();
 }
-let showKeys=true;
 function updateLabels(){
   for(const m in keyEls){const o=keyEls[m].querySelector('.qk');if(o)o.remove()}
   if(!showKeys)return;
@@ -124,127 +527,304 @@ function updateLabels(){
     const d=document.createElement('div');d.className='qk';d.textContent=k.toUpperCase();el.appendChild(d);
   }
 }
-// highlight only the single key matching the falling note
-function markTarget(){
-  for(const m in keyEls)keyEls[m].classList.remove('target');
-  const i=targetIdx();
-  if(i!=null&&$('hl').checked)keyEls[fit(song[i])]?.classList.add('target');
-}
-function targetIdx(){
-  if(mode==='wait')return idx<song.length?idx:null;
-  for(let i=0;i<song.length;i++)if(results[i]==null&&i>=pos-0.5)return i;
+// the step whose notes should be played next
+function targetStep(){
+  if(demo)return null;
+  if(mode==='wait')return idx<steps.length?idx:null;
+  for(let s=0;s<steps.length;s++)
+    if(steps[s].t+WIN>=pos&&steps[s].ns.some(i=>results[i]==null))return s;
   return null;
 }
+function markTarget(){
+  for(const m in keyEls)keyEls[m].classList.remove('target','targetL');
+  const s=targetStep();
+  // slide the computer-keyboard labels under the notes that are coming up
+  if(s!=null&&$('autooct').checked)setBase(Math.floor(Math.min(...steps[s].ns.map(i=>notes[i].m))/12)-1);
+  if(s==null||!$('hl').checked)return;
+  for(const i of steps[s].ns)if(results[i]==null)
+    keyEls[fit(notes[i].m)]?.classList.add(notes[i].h==='L'?'targetL':'target');
+}
 function flash(m,cls){const el=keyEls[m];if(!el)return;el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),250)}
-kb.addEventListener('pointerdown',e=>{const m=e.target.dataset?.m;if(m!=null)input(+m,'click')});
+const cdown=new Set();
+kb.addEventListener('pointerdown',e=>{const m=e.target.dataset?.m;if(m!=null){cdown.add(e.pointerId);press(+m,'click','p'+e.pointerId)}});
+const pup=e=>{if(cdown.delete(e.pointerId))release('p'+e.pointerId)};
+addEventListener('pointerup',pup);addEventListener('pointercancel',pup);
 
-// ---------- wait mode ----------
-let lastMatch=0,mode='wait',results=[],running=false,t0=0,pos=0,lastTarget=null;
+// ---------- scoring ----------
 function wrong(m){streak=0;if($('wrongfx').checked)flash(m,'key-detected-wrong')}
-function input(m,src){
-  // mic/MIDI input comes from a real instrument, so don't echo it through the synth
-  if(src==='click'||src==='qwerty')synth(m,0.8);
+// Held notes (Wait mode): a correct press turns the note amber and it only counts once it
+// has been held for most of its length; letting go early means playing it again.
+const presses=new Map(),down=new Map();
+function holdNeed(ks,src){
+  const d=Math.max(...ks.map(k=>notes[k].d));
+  return clamp(d*beatMs()*(src==='mic'?0.5:0.7),150,4000);
+}
+function hit(i,m,mic,src,key){
+  // the mic hears one pitch at a time, so a mic hit credits every note of that chord
+  const group=mic?steps[notes[i].step].ns.filter(k=>results[k]==null):[i];
+  if(mode==='wait'&&$('hold').checked){
+    finishPress(key); // a new press on the same key completes the previous one
+    const now=performance.now();
+    for(const k of group)results[k]='holding';
+    presses.set(key,{ks:group,start:now,need:holdNeed(group,src),last:now,pc:m%12});
+  }else for(const k of group){results[k]='hit';hits++}
+  correct++;streak++;flash(m,'key-detected-correct');
+}
+function finishPress(key){
+  const p=presses.get(key);if(!p)return;presses.delete(key);
+  for(const k of p.ks)if(results[k]==='holding'){results[k]='hit';hits++}
+  advance();
+}
+let waitT=0;const progress=new Map(); // Wait-mode position in beats; scored notes by hand-independent key
+function advance(){
+  while(idx<steps.length&&steps[idx].ns.every(k=>results[k]==='hit')){
+    idx++;if(idx>=steps.length)$('status').textContent='🎉 Song complete!';
+  }
+  if(steps[idx])waitT=steps[idx].t;
+}
+function press(m,src,key){
+  down.set(key,m);keyEls[m]?.classList.add('down');
+  if(src==='click'||src==='qwerty')noteOn(m,key); // a real instrument makes its own sound
+  input(m,src,key);
+}
+function release(key){
+  noteOff(key);
+  const m=down.get(key);
+  if(m!=null){down.delete(key);if(![...down.values()].includes(m))keyEls[m]?.classList.remove('down')}
+  const p=presses.get(key);if(!p)return;
+  presses.delete(key);
+  for(const k of p.ks)if(results[k]==='holding')results[k]=null;
+  streak=0;$('status').textContent='Hold the note until its bar fills.';
+  markTarget();updateStats();
+}
+function holdTick(){
+  if(!presses.size)return;
   const now=performance.now();
+  for(const [key,p] of [...presses]){
+    if(key==='mic'&&now-p.last>250)release(key); // mic stopped hearing the note
+    else if(now-p.start>=p.need){finishPress(key);markTarget();updateStats()}
+  }
+}
+function input(m,src,key){
+  if(demo){if(!demoPaused)return;killDemo()} // playing while paused hands control back to you
+  const now=performance.now(),pc=m%12,mic=src==='mic';
   if(mode==='wait'){
-    if(idx>=song.length)return;
-    if(src==='mic'&&now-lastMatch<300)return;
+    if(idx>=steps.length)return;
+    if(mic&&now-lastMatch<300)return;
     total++;
-    if(m%12===song[idx]%12){
-      results[idx]='hit';correct++;streak++;idx++;lastMatch=now;flash(m,'key-detected-correct');
-      if(idx>=song.length)$('status').textContent='🎉 Song complete!';
-    }else wrong(m);
+    const i=steps[idx].ns.find(k=>results[k]==null&&notes[k].m%12===pc);
+    if(i!=null){hit(i,m,mic,src,key);lastMatch=now;advance()}
+    else wrong(m);
   }else{
     if(!running)return;
     let best=-1;
-    for(let i=0;i<song.length;i++)
-      if(results[i]==null&&Math.abs(pos-i)<=0.5&&song[i]%12===m%12&&(best<0||Math.abs(pos-i)<Math.abs(pos-best)))best=i;
+    for(let i=scanFrom;i<notes.length&&notes[i].t-WIN<=pos;i++)
+      if(results[i]==null&&notes[i].m%12===pc&&(best<0||Math.abs(pos-notes[i].t)<Math.abs(pos-notes[best].t)))best=i;
     total++;
-    if(best>=0){results[best]='hit';correct++;streak++;flash(m,'key-detected-correct')}
-    else wrong(m);
+    if(best>=0)hit(best,m,mic,src,key);else wrong(m);
   }
   markTarget();updateStats();
 }
 function updateStats(){
-  $('pos').textContent=(mode==='wait'?idx:correct)+'/'+song.length;$('streak').textContent=streak;
+  $('pos').textContent=hits+'/'+notes.length;$('streak').textContent=streak;
   $('acc').textContent=total?Math.round(100*correct/total)+'%':'–';
 }
-function loadSong(seq){
-  song=seq;idx=0;total=correct=streak=0;results=[];running=false;
-  pos=mode==='tempo'?-2:0;
-  $('start').textContent='▶ Start';
-  $('status').textContent=mode==='wait'?'Play the highlighted note.':'Press Start, then play each note as it reaches the line.';
-  markTarget();updateStats();
-}
-const beatMs=()=>60000/+$('bpm').value;
 function tempoTick(){
   if(!running)return;
   pos=(performance.now()-t0)/beatMs();
-  for(let i=0;i<song.length;i++)
-    if(results[i]==null&&pos>i+0.5){results[i]='miss';streak=0;total++;updateStats()}
-  if(pos>song.length+0.5){
-    running=false;$('start').textContent='▶ Start';
-    const hits=results.filter(r=>r==='hit').length;
-    $('status').textContent=`Finished: ${hits} of ${song.length} notes played on time, ${song.length-hits} missed.`;
+  while(scanFrom<notes.length&&notes[scanFrom].t+WIN<pos){
+    if(results[scanFrom]==null){results[scanFrom]='miss';streak=0;total++;updateStats()}
+    scanFrom++;
+  }
+  if(scanFrom>=notes.length&&pos>notes[notes.length-1].t+1){
+    running=false;done=true;$('start').textContent='▶ Play again';
+    $('status').textContent=`Finished: ${hits} of ${notes.length} notes played on time, ${notes.length-hits} missed.`;
   }
 }
 
 // ---------- canvas roll ----------
 const cv=$('roll'),cx=cv.getContext('2d');
-const GAP=70,NH=44;
 function resize(){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;cx.setTransform(d,0,0,d,0,0)}
 new ResizeObserver(resize).observe(cv.parentElement); // also fires when the settings bar opens/closes
-function xOf(m,w){ // match keyboard geometry
-  const [lo,hi]=range;let whites=0,wi=0;
+// x position and width of each key's column, matching the keyboard below
+function layout(w){
+  const [lo,hi]=range;let whites=0,wi=0;const xs={};
   for(let k=lo;k<=hi;k++)if(!isBlack(k))whites++;
-  const ww=w/whites;let pos=null;
-  for(let k=lo;k<=hi;k++){
-    if(!isBlack(k)){if(k===m)pos=wi*ww+ww/2;wi++}
-    else if(k===m)pos=wi*ww;
-  }
-  return {x:pos,ww};
+  const ww=w/whites;
+  for(let k=lo;k<=hi;k++){if(!isBlack(k)){xs[k]=wi*ww+ww/2;wi++}else xs[k]=wi*ww}
+  return {xs,ww};
 }
-function draw(t){
+function draw(ts){
   const w=cv.clientWidth,h=cv.clientHeight,base=h-30;
   cx.clearRect(0,0,w,h);
-  if(mode==='wait')pos+=(idx-pos)*0.15;else tempoTick();
-  const tg=targetIdx();if(tg!==lastTarget){lastTarget=tg;markTarget()}
-  // hit line
+  if(demo)demoTick();
+  else if(mode==='wait'){
+    const tgt=steps[idx]?steps[idx].t:(notes.length?notes[notes.length-1].t+1:0);
+    pos+=(tgt-pos)*0.15;
+  }else tempoTick();
+  holdTick();
+  const now=performance.now(),frac=new Map();
+  for(const p of presses.values())for(const k of p.ks)frac.set(k,clamp((now-p.start)/p.need,0,1));
+  const tg=targetStep();if(tg!==lastTarget){lastTarget=tg;markTarget()}
   cx.strokeStyle='#22d3ee55';cx.lineWidth=2;cx.beginPath();cx.moveTo(0,base);cx.lineTo(w,base);cx.stroke();
-  for(let i=0;i<song.length;i++){
-    const m=fit(song[i]);const {x,ww}=xOf(m,w);if(x==null)continue;
-    const y=base-(i-pos)*GAP;if(y<-NH)break;
-    // notes that have passed the line fade out instead of piling up
-    const past=pos-i,alpha=past>0.3?1-(past-0.3)*1.2:1;if(alpha<=0)continue;
-    const res=results[i],active=i===tg,col=res==='hit'?'#34d399':res==='miss'?'#f87171':'#22d3ee';
-    const pw=Math.max(ww*0.9,14);
-    cx.globalAlpha=alpha;
-    cx.beginPath();cx.roundRect(x-pw/2,y-NH,pw,NH,8);
-    cx.fillStyle=col+(res?'44':active?'55':'22');cx.fill();
-    cx.strokeStyle=col;cx.lineWidth=active?3:1.5;
-    if(active){cx.shadowColor=col;cx.shadowBlur=14+6*Math.sin(t/200)}
+  const {xs,ww}=layout(w),pw=Math.max(ww*0.9,14);
+  for(let i=0;i<notes.length;i++){
+    const n=notes[i],y=base-(n.t-pos)*PX;if(y<0)break;
+    const ph=clamp(n.d*PX-4,14,PX*4);if(y-ph>h)continue;
+    const x=xs[fit(n.m)];if(x==null)continue;
+    const res=results[i],active=tg!=null&&n.step===tg&&res==null;
+    // hit notes fade out once the line has passed them
+    cx.globalAlpha=res==='hit'||res==='skip'?clamp(1-(pos-n.t-0.25)*2,0,1):1;
+    if(cx.globalAlpha<=0)continue;
+    const playing=demo&&n.t<=pos&&pos<n.t+n.d;
+    const col=res==='hit'?'#34d399':res==='skip'?'#6b7280':res==='miss'?'#f87171':res==='holding'?'#f59e0b':n.h==='L'?'#a78bfa':'#22d3ee';
+    cx.beginPath();cx.roundRect(x-pw/2,y-ph,pw,ph,8);
+    cx.fillStyle=col+(res?'44':active||playing?'77':'22');cx.fill();
+    if(res==='holding'){ // hold progress fills the bar from the bottom
+      cx.save();cx.clip();cx.fillStyle=col+'99';
+      const fh=ph*frac.get(i);cx.fillRect(x-pw/2,y-fh,pw,fh);cx.restore();
+      cx.beginPath();cx.roundRect(x-pw/2,y-ph,pw,ph,8);
+    }
+    cx.strokeStyle=col;cx.lineWidth=active||playing?3:1.5;
+    if(active||playing){cx.shadowColor=col;cx.shadowBlur=14+6*Math.sin(ts/200)}
     cx.stroke();cx.shadowBlur=0;
-    if(pw>20){cx.fillStyle='#e6edf3';cx.font='11px system-ui';cx.textAlign='center';cx.fillText(NAMES[song[i]%12],x,y-NH/2+4)}
-    cx.globalAlpha=1;
+    if(pw>20&&ph>=18){cx.fillStyle='#e6edf3';cx.font='11px system-ui';cx.textAlign='center';cx.fillText(NAMES[n.m%12],x,y-ph/2+4)}
+  }
+  cx.globalAlpha=1;
+  updateSeek();
+  if(mode==='tempo'&&running&&pos<0){
+    cx.fillStyle='#e6edf3';cx.font='bold 64px system-ui';cx.textAlign='center';cx.fillText(Math.ceil(-pos),w/2,h/2);
   }
   requestAnimationFrame(draw);
 }
-// transpose octaves so notes fall inside the visible keyboard range
-function fit(m){while(m<range[0])m+=12;while(m>range[1])m-=12;return m}
+
+// ---------- jump to any point in the song ----------
+let seeking=false,wheelAcc=0,countIn=false;
+const curBeat=()=>mode==='wait'?waitT:Math.max(pos,0);
+function seekTo(t){
+  if(!notes.length)return;
+  t=clamp(t,0,endT);
+  if(demo){ // move the computer's playback instead
+    if(!demoPaused)for(const o of demoOffs){noteOff('d'+o.i);demoKey(notes[o.i],false)}
+    demoOffs=[];demoNext=notes.findIndex(n=>n.t>=t-0.001);if(demoNext<0)demoNext=notes.length;
+    pos=t;t0=performance.now()-pos*beatMs();return;
+  }
+  presses.clear();progress.clear();
+  results=[];hits=0;total=correct=streak=0;
+  notes.forEach((n,i)=>{if(n.t<t-0.001)results[i]='skip'}); // before the start point: not scored
+  idx=steps.findIndex(s=>s.t>=t-0.001);if(idx<0)idx=steps.length;
+  waitT=steps[idx]?steps[idx].t:t;
+  if(mode==='tempo'){
+    pos=t;if(!running)countIn=true; // Start will add a two-beat count-in before this point
+    done=false;
+    scanFrom=notes.findIndex(n=>n.t+WIN>=pos);if(scanFrom<0)scanFrom=notes.length;
+    if(running)t0=performance.now()-pos*beatMs();
+  }
+  lastTarget=null;markTarget();updateStats();
+  $('status').textContent='Starting from '+fmtBeat(t)+'.';
+}
+// move by whole steps (chords/notes), forwards or back
+function stepBy(d){
+  let cur=steps.findIndex(s=>s.t>=curBeat()-0.001);if(cur<0)cur=steps.length;
+  const to=clamp(cur+d,0,steps.length-1);
+  if(steps[to])seekTo(steps[to].t);
+}
+const fmtBeat=b=>{const s=Math.round(b*60/+$('bpm').value);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function updateSeek(){
+  const s=$('seek');if(+s.max!==endT)s.max=endT;
+  const cur=clamp(pos,0,endT);
+  if(!seeking)s.value=cur;
+  const txt=fmtBeat(cur)+' / '+fmtBeat(endT);
+  if($('seekl').textContent!==txt)$('seekl').textContent=txt;
+}
+$('seek').addEventListener('pointerdown',()=>seeking=true);
+addEventListener('pointerup',()=>seeking=false);
+$('seek').addEventListener('input',()=>seekTo(+$('seek').value));
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();wheelAcc+=e.deltaY;
+  while(Math.abs(wheelAcc)>=80){stepBy(wheelAcc>0?1:-1);wheelAcc-=Math.sign(wheelAcc)*80}
+},{passive:false});
+
+// ---------- listen: the computer plays the song perfectly ----------
+let demo=false,demoPaused=false,demoNext=0,demoOffs=[],demoPos0=0;const demoCnt={};
+function pauseDemo(){
+  demoPaused=true;
+  for(const o of demoOffs){noteOff('d'+o.i);demoKey(notes[o.i],false)}
+  $('listen').textContent='▶ Resume';
+  $('status').textContent='Paused. Press Resume to keep listening, or play a note to go back to practice.';
+}
+function resumeDemo(){
+  for(const o of demoOffs){noteOn(notes[o.i].m,'d'+o.i,true);demoKey(notes[o.i],true)}
+  t0=performance.now()-pos*beatMs();demoPaused=false;
+  $('listen').textContent='⏸ Pause';
+  $('status').textContent='Listening…';
+}
+function demoKey(n,on){
+  const id=fit(n.m)+n.h,el=keyEls[fit(n.m)];
+  demoCnt[id]=(demoCnt[id]||0)+(on?1:-1);
+  el?.classList.toggle(n.h==='L'?'targetL':'target',demoCnt[id]>0);
+}
+function demoTick(){
+  if(demoPaused)return;
+  pos=(performance.now()-t0)/beatMs();
+  while(demoNext<notes.length&&notes[demoNext].t<=pos){
+    const n=notes[demoNext];noteOn(n.m,'d'+demoNext,true);demoKey(n,true);
+    demoOffs.push({at:n.t+n.d,i:demoNext});demoNext++;
+  }
+  demoOffs=demoOffs.filter(o=>{
+    if(o.at>pos)return true;
+    noteOff('d'+o.i);demoKey(notes[o.i],false);return false;
+  });
+  if(demoNext>=notes.length&&!demoOffs.length){killDemo();$('status').textContent='Demo finished. Your turn!'}
+}
+function killDemo(){
+  if(!demo)return;
+  demo=false;
+  if(!demoPaused)for(const o of demoOffs){noteOff('d'+o.i);demoKey(notes[o.i],false)}
+  demoPaused=false;demoOffs=[];pos=demoPos0;$('listen').textContent='🔊 Listen';$('listen').classList.remove('on');
+  $('status').textContent='Back to practice — your place was kept.';
+}
+function startDemo(){
+  audio();
+  if(!notes.length)return;
+  // play from where you are (or from the top if the song is finished); your progress is left untouched
+  if(running){running=false;$('start').textContent='▶ Resume'}
+  demoPos0=pos;
+  let from=mode==='wait'?(steps[idx]?steps[idx].t:0):Math.max(pos,0);
+  demoNext=notes.findIndex(n=>n.t>=from-0.001);
+  if(demoNext<0){demoNext=0;from=0}
+  demo=true;demoOffs=[];pos=from-1;t0=performance.now()-pos*beatMs();
+  if($('inst').value==='grand')loadSamples();
+  $('listen').textContent='⏸ Pause';$('listen').classList.add('on');
+  $('status').textContent='Listening… the computer plays the song (hands and tempo follow your settings).';
+}
 
 // ---------- QWERTY ----------
-const QMAP={a:0,w:1,s:2,e:3,d:4,f:5,t:6,g:7,y:8,h:9,u:10,j:11,k:12,o:13,l:14,p:15,';':16,"'":17};
-let base=4;
+// two-row layout like a DAW: bottom row = one octave from C, top row = the next octave and a bit
+const QMAP={z:0,s:1,x:2,d:3,c:4,v:5,g:6,b:7,h:8,n:9,j:10,m:11,
+  q:12,'2':13,w:14,'3':15,e:16,r:17,'5':18,t:19,'6':20,y:21,'7':22,u:23,i:24,'9':25,o:26,'0':27,p:28};
+function setBase(b){b=clamp(b,0,7);if(b===base)return;base=b;$('oct').textContent=base;updateLabels()}
 addEventListener('keydown',e=>{
-  if(e.repeat||e.target.tagName==='INPUT'||e.ctrlKey||e.metaKey)return;
+  if(e.repeat||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||e.ctrlKey||e.metaKey)return;
   const k=e.key.toLowerCase();
-  if(k==='z'){base=Math.max(1,base-1);$('oct').textContent=base;updateLabels();return}
-  if(k==='x'){base=Math.min(7,base+1);$('oct').textContent=base;updateLabels();return}
-  if(k in QMAP)input((base+1)*12+QMAP[k],'qwerty');
+  if(k==='arrowleft'||k==='arrowright'||k==='['||k===']'){
+    $('autooct').checked=false; // moving the keys by hand turns off auto-follow
+    setBase(base+(k==='arrowleft'||k==='['?-1:1));e.preventDefault();return;
+  }
+  if(k==='arrowup'||k==='arrowdown'||k==='pageup'||k==='pagedown'){
+    stepBy((k==='arrowdown'||k==='pagedown'?1:-1)*(k.startsWith('page')?8:1));e.preventDefault();return;
+  }
+  if(k in QMAP){const m=(base+1)*12+QMAP[k];qdown[k]=m;press(m,'qwerty','q'+m)}
 });
+const qdown={};
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in qdown){release('q'+qdown[k]);delete qdown[k]}});
 
-// ---------- MIDI ----------
+// ---------- MIDI keyboard input ----------
 if(navigator.requestMIDIAccess)navigator.requestMIDIAccess().then(a=>{
-  const hook=i=>i.onmidimessage=e=>{const [s,n,v]=e.data;if((s&0xf0)===0x90&&v>0)input(n,'midi')};
+  const hook=i=>i.onmidimessage=e=>{
+    const [s,n,v]=e.data,hi=s&0xf0;
+    if(hi===0x90&&v>0)press(n,'midi','m'+n);else if(hi===0x80||hi===0x90)release('m'+n);
+  };
   a.inputs.forEach(hook);a.onstatechange=()=>a.inputs.forEach(hook);
 }).catch(()=>{});
 
@@ -253,9 +833,9 @@ let analyser,buf,micOn=false,cand=null,candN=0,prevRms=0,lastMicMidi=-1;
 async function startMic(){
   try{
     const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-    const c=audio(),src=c.createMediaStreamSource(s);
-    analyser=c.createAnalyser();analyser.fftSize=4096;buf=new Float32Array(analyser.fftSize);src.connect(analyser);
-    micOn=true;$('mic').classList.add('on');$('mic').textContent='Mic On';$('status').textContent='Listening…';
+    const c=audio(),node=c.createMediaStreamSource(s);
+    analyser=c.createAnalyser();analyser.fftSize=4096;buf=new Float32Array(analyser.fftSize);node.connect(analyser);
+    micOn=true;$('mic').classList.add('on');$('mic').textContent='🎤 On';$('status').textContent='Listening… (the mic hears one note at a time)';
     micLoop();
   }catch(err){$('status').textContent='Microphone unavailable: '+err.message}
 }
@@ -267,11 +847,10 @@ function detect(b,sr){
   let e0=0;for(let j=0;j<W;j++)e0+=b[j]*b[j];
   let eT=0;for(let j=0;j<W;j++)eT+=b[j+minTau-1]*b[j+minTau-1];
   for(let tau=minTau;tau<=maxTau;tau++){
-    let ac=0;for(let j=0;j<W;j++)ac+=b[j]*b[j+tau];
+    let c=0;for(let j=0;j<W;j++)c+=b[j]*b[j+tau];
     eT+=b[W-1+tau]*b[W-1+tau]-b[tau-1]*b[tau-1]; // slide window energy
-    nsdf[tau]=ac/(Math.sqrt(e0*Math.max(eT,0))+1e-9);
+    nsdf[tau]=c/(Math.sqrt(e0*Math.max(eT,0))+1e-9);
   }
-  // key maxima between zero crossings
   const peaks=[];let tau=minTau;
   while(tau<maxTau&&nsdf[tau]>0)tau++;
   while(tau<maxTau){
@@ -285,8 +864,7 @@ function detect(b,sr){
   const p=peaks.find(p=>nsdf[p]>=0.85*mx);
   if(nsdf[p]<0.5)return {rms};
   const y1=nsdf[p-1],y2=nsdf[p],y3=nsdf[p+1],d=(y3-y1)/(2*(2*y2-y1-y3)||1e-9);
-  const f=sr/(p+d);
-  return {rms,midi:Math.round(69+12*Math.log2(f/440))};
+  return {rms,midi:Math.round(69+12*Math.log2(sr/(p+d)/440))};
 }
 // live readout of what the mic detects, plus an amber marker on the matching key
 let heardEl=null;
@@ -303,46 +881,95 @@ function micLoop(){
   analyser.getFloatTimeDomainData(buf);
   const r=detect(buf,ac.sampleRate);
   showHeard(r);
+  const hp=presses.get('mic');if(hp&&r.midi!=null&&r.midi%12===hp.pc)hp.last=performance.now();
   if(r.midi!=null&&r.midi>=21&&r.midi<=108){
     if(r.midi===cand)candN++;else{cand=r.midi;candN=1}
     const onset=r.rms>prevRms*1.25||r.midi!==lastMicMidi;
-    if(candN>=2&&onset){lastMicMidi=r.midi;candN=0;input(r.midi,'mic')}
+    if(candN>=2&&onset){lastMicMidi=r.midi;candN=0;input(r.midi,'mic','mic')}
   }else{cand=null;candN=0;if(!r.rms||r.rms<+$('thr').value)lastMicMidi=-1}
   prevRms=r.rms||0;
   setTimeout(micLoop,20);
 }
 
+// ---------- import ----------
+function addCustom(c,s){
+  customs.push(c);saveCustoms();refreshSongs('c:'+(customs.length-1));
+  $('bpm').value=clamp(s.bpm,30,240);$('bpmv').textContent=$('bpm').value;loadSong(s);
+}
+async function importFile(f){
+  try{
+    const buf=await f.arrayBuffer(),name=f.name.replace(/\.midi?$/i,'');
+    const s=parseMidi(buf,name);
+    addCustom({name,kind:'midi',data:b64(buf)},s);
+    $('dlg').close?.();
+    $('status').textContent=`Loaded "${name}": ${s.notes.length} notes. Use the hands selector to practise one hand at a time.`;
+  }catch(err){alert('Could not read that file: '+err.message)}
+}
+$('import').onclick=()=>$('dlg').showModal();
+$('cancel').onclick=()=>$('dlg').close();
+$('file').onchange=e=>{if(e.target.files[0])importFile(e.target.files[0]);e.target.value=''};
+$('load').onclick=()=>{
+  const text=$('txt').value.trim();if(!text)return;
+  const name=$('sname').value.trim()||'Custom '+(customs.length+1);
+  try{addCustom({name,kind:'text',data:text},textSong(name,text));$('dlg').close();$('txt').value=$('sname').value=''}
+  catch(err){alert(err.message)}
+};
+$('del').onclick=()=>{
+  const v=$('song').value;if(!v.startsWith('c:'))return alert('Select one of your imported songs (★) first.');
+  customs.splice(+v.slice(2),1);saveCustoms();refreshSongs();pickSong();$('dlg').close();
+};
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&/\.midi?$/i.test(f.name))importFile(f)});
+
 // ---------- UI wiring ----------
-for(const n in SONGS){const o=document.createElement('option');o.textContent=n;$('song').appendChild(o)}
-const seqOf=s=>s.trim().split(/[\s,]+/).map(parseNote).filter(n=>n!=null);
-$('song').onchange=()=>loadSong(seqOf(SONGS[$('song').value]));
+$('song').onchange=pickSong;
+$('hands').onchange=changeHands;
+$('split').onchange=changeHands;
 $('range').onchange=()=>{range=$('range').value.split(',').map(Number);buildKeyboard()};
-$('restart').onclick=()=>loadSong(song);
+$('listen').onclick=()=>{if(!demo)startDemo();else if(demoPaused)resumeDemo();else pauseDemo()};
+$('restart').onclick=()=>loadSong(src);
 $('mic').onclick=()=>{audio();if(!micOn)startMic()};
 $('gear').onclick=()=>$('settings').classList.toggle('open');
-$('mode').onchange=()=>{mode=$('mode').value;$('start').style.display=mode==='tempo'?'':'none';loadSong(song)};
+$('close').onclick=()=>$('settings').classList.remove('open');
+// hands and mode read better as small toggle groups; the hidden selects stay the source of truth
+const segs=[['hands',['Both','Right','Left']],['mode',['Wait','Tempo']]].map(([id,labels])=>{
+  const sel=$(id),wrap=document.createElement('div');
+  wrap.className='seg';sel.style.display='none';
+  [...sel.options].forEach((o,i)=>{
+    const b=document.createElement('button');b.textContent=labels[i];b.title=o.text;b.dataset.v=o.value;
+    b.onclick=()=>{sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))};
+    wrap.appendChild(b);
+  });
+  sel.after(wrap);return [sel,wrap];
+});
+const syncSegs=()=>segs.forEach(([sel,w])=>[...w.children].forEach(b=>b.classList.toggle('on',b.dataset.v===sel.value)));
+setInterval(syncSegs,150);syncSegs();
+$('mode').onchange=()=>{mode=$('mode').value;$('start').style.display=mode==='tempo'?'':'none';loadSong(src)};
 $('start').onclick=()=>{
   audio();
   if(running){running=false;$('start').textContent='▶ Resume';return}
-  if(pos>song.length||results.every(r=>r!=null)&&song.length)loadSong(song);
+  if(done)loadSong(src);
+  if(countIn){pos-=2;countIn=false}
   t0=performance.now()-pos*beatMs();running=true;$('start').textContent='⏸ Pause';
   $('status').textContent='Play each note as it reaches the line.';
 };
-$('keys').onclick=()=>{showKeys=!showKeys;$('keys').classList.toggle('on',showKeys);updateLabels()};
+$('keys').onclick=()=>{showKeys=!showKeys;$('keys').classList.toggle('on',showKeys);updateLabels();saveSettings()};
+document.addEventListener('change',saveSettings);document.addEventListener('input',saveSettings);
+$('reset').onclick=()=>{if(confirm('Reset all settings to their defaults? Your imported songs are kept.')){localStorage.removeItem('piano.settings');location.reload()}};
 $('hl').onchange=markTarget;
 $('bpm').oninput=()=>{
   $('bpmv').textContent=$('bpm').value;
-  if(running)t0=performance.now()-pos*beatMs(); // keep position when tempo changes
+  if(running||demo)t0=performance.now()-pos*beatMs(); // keep position when tempo changes
 };
+$('inst').onchange=()=>{
+  if($('inst').value==='grand')loadSamples();
+  noteOn(60,'preview');setTimeout(()=>noteOff('preview'),600); // preview the new sound
+};
+$('vol').oninput=()=>{if(master)master.gain.value=+$('vol').value};
+$('reverb').onchange=()=>{if(wet)wet.gain.value=$('reverb').checked?0.25:0};
 $('thr').oninput=()=>$('thrv').textContent=$('thr').value;
-$('import').onclick=()=>{
-  const s=prompt('Enter notes (e.g. C4 D4 E4 F#4 G4):');if(!s)return;
-  const q=seqOf(s);if(!q.length)return alert('No valid notes found.');
-  SONGS['Custom']=s;if(![...$('song').options].some(o=>o.text==='Custom')){const o=document.createElement('option');o.textContent='Custom';$('song').appendChild(o)}
-  $('song').value='Custom';loadSong(q);
-};
 
-resize();buildKeyboard();loadSong(seqOf(SONGS['Ode to Joy']));requestAnimationFrame(draw);
+applyStore();refreshSongs(songValue(store.song));resize();buildKeyboard();pickSong();requestAnimationFrame(draw);
 </script>
 </body>
 </html>
